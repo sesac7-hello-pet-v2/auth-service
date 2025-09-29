@@ -28,7 +28,7 @@ public class AuthService implements LoginUseCase {
     public LoginResult login(LoginCommand cmd) {
         LoginValidationResponse res = authPort.validationRequest(new LoginQuery(cmd.email(), cmd.password()));
         if (!res.valid()) {
-            throw new LoginCredentialException("Invalid email or password");
+            throw new LoginCredentialException("이메일 혹은 패스워드가 올바르지 않습니다.");
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(res.email(), res.id(), res.role());
