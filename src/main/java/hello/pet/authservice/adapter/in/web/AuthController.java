@@ -2,9 +2,13 @@ package hello.pet.authservice.adapter.in.web;
 
 import hello.pet.authservice.adapter.in.web.dto.LoginRequest;
 import hello.pet.authservice.adapter.out.dto.LoginResponse;
+import hello.pet.authservice.adapter.out.security.TokenHash;
 import hello.pet.authservice.application.port.in.LoginUseCase;
+import hello.pet.authservice.application.port.in.LogoutUseCase;
 import hello.pet.authservice.application.port.in.command.LoginCommand;
+import hello.pet.authservice.application.port.in.command.LogoutCommand;
 import hello.pet.authservice.application.port.out.result.LoginResult;
+import hello.pet.authservice.application.port.out.result.LogoutResult;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 
@@ -28,6 +29,7 @@ import java.time.Duration;
 public class AuthController {
 
     private final LoginUseCase loginUseCase;
+    private final LogoutUseCase logoutUseCase;
 
     @Value("${jwt.cookie.secure:false}")
     private boolean cookieSecure;
@@ -71,7 +73,17 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse resp) {
+    public ResponseEntity<Void> logout(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken,
+            HttpServletResponse resp) {
+
+        LogoutCommand cmd = new LogoutCommand(userId, TokenHash.sha256(refreshToken));
+        LogoutResult res = logoutUseCase.logout(cmd);
+
+        if (!res.success()) {
+            log.warn("Logout failed for user: {}, reason: {}", userId, res.message());
+        }
 
         ResponseCookie access = ResponseCookie.from("ACCESS_TOKEN", "")
                 .httpOnly(true)

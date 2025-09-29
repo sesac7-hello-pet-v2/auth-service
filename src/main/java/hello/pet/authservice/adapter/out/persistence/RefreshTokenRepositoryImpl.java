@@ -5,6 +5,8 @@ import hello.pet.authservice.domain.entity.RefreshToken;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 @RequiredArgsConstructor
 public class RefreshTokenRepositoryImpl implements RefreshTokenRepository {
@@ -14,5 +16,10 @@ public class RefreshTokenRepositoryImpl implements RefreshTokenRepository {
     @Override
     public void save(RefreshToken refreshToken) {
         refreshTokenJpaRepository.save(refreshToken);
+    }
+
+    @Override
+    public Optional<RefreshToken> findByUserIdAndTokenHash(Long userId, String hash) {
+        return refreshTokenJpaRepository.findByUserIdAndTokenHash(userId, hash);
     }
 }
