@@ -16,6 +16,10 @@ public class GlobalExceptionHandler {
                 .body(Map.of("code", "UNAUTHORIZED", "message", e.getMessage()));
     }
 
-    // 필요시 추가 핸들러들...
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<?> handleInvalidRefresh(InvalidRefreshTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("code","INVALID_REFRESH_TOKEN","message", e.getMessage()));
+    }
 }
 

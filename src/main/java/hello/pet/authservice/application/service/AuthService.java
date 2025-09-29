@@ -2,16 +2,22 @@ package hello.pet.authservice.application.service;
 
 import hello.pet.authservice.adapter.out.dto.LoginValidationResponse;
 import hello.pet.authservice.adapter.out.security.JwtTokenProvider;
+import hello.pet.authservice.adapter.out.security.TokenHash;
 import hello.pet.authservice.application.exception.LoginCredentialException;
 import hello.pet.authservice.application.port.in.LoginUseCase;
 import hello.pet.authservice.application.port.in.command.LoginCommand;
 import hello.pet.authservice.application.port.out.AuthPort;
+import hello.pet.authservice.application.port.out.RefreshTokenRepository;
 import hello.pet.authservice.application.port.out.query.LoginQuery;
 import hello.pet.authservice.application.port.out.result.LoginResult;
+import hello.pet.authservice.domain.entity.RefreshToken;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 @Slf4j
 @Service
@@ -20,11 +26,13 @@ public class AuthService implements LoginUseCase {
 
     private final AuthPort authPort;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Value("${jwt.token-prefix}")
     private String tokenPrefix;
 
     @Override
+    @Transactional
     public LoginResult login(LoginCommand cmd) {
         LoginValidationResponse res = authPort.validationRequest(new LoginQuery(cmd.email(), cmd.password()));
         if (!res.valid()) {
@@ -33,6 +41,16 @@ public class AuthService implements LoginUseCase {
 
         String accessToken = jwtTokenProvider.generateAccessToken(res.email(), res.id(), res.role());
         String refreshToken = jwtTokenProvider.generateRefreshToken(res.email(), res.id(), res.role());
+
+        refreshTokenRepository.save(new RefreshToken(
+                null,
+                res.id(),
+                TokenHash.sha256(refreshToken),
+                Instant.now().plusMillis(jwtTokenProvider.getJwtRefreshTokenExpirationMs()),
+                false,
+                null,
+                Instant.now()
+        ));
 
         return LoginResult.success(accessToken, refreshToken, tokenPrefix, res.id(), res.nickname(), res.role(), res.profileUrl());
     }
