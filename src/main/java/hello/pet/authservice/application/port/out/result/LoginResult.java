@@ -4,7 +4,12 @@ public record LoginResult(
         String accessToken,
         String refreshToken,
         String tokenType,  // "Bearer"
-        Long expiresIn,     // 3600 (초 단위)
         Long userId,
-        String nickname) {
+        String nickname,
+        String role,
+        String profileUrl
+) {
+    public static LoginResult success(String accessToken, String refreshToken, String tokenPrefix, Long id, String nickname, String role, String userProfileUrl) {
+        return new LoginResult(accessToken, refreshToken, tokenPrefix, id, nickname, role, userProfileUrl);
+    }
 }

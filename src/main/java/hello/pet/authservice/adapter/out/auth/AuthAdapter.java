@@ -17,9 +17,8 @@ public class AuthAdapter implements AuthPort {
     private final AuthClient authClient;
 
     @Override
-    public void validationRequest(LoginQuery query) {
+    public LoginValidationResponse validationRequest(LoginQuery query) {
         LoginValidationRequest req = query.toRequest();
-        LoginValidationResponse res = authClient.validationRequest(req);
-        log.info("Validation response from auth service: {}", res);
+        return authClient.validationRequest(req);
     }
 }
