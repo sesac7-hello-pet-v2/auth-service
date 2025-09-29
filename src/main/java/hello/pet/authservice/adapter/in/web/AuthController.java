@@ -69,4 +69,29 @@ public class AuthController {
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse resp) {
+
+        ResponseCookie access = ResponseCookie.from("ACCESS_TOKEN", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .build();
+
+        ResponseCookie refresh = ResponseCookie.from("REFRESH_TOKEN", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .build();
+
+        resp.addHeader(HttpHeaders.SET_COOKIE, access.toString());
+        resp.addHeader(HttpHeaders.SET_COOKIE, refresh.toString());
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
 }
