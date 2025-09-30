@@ -50,7 +50,7 @@ public class AuthService implements LoginUseCase, LogoutUseCase, RefreshTokenUse
 
         log.info("로그인 성공: userId={}, accessToken");
 
-        return LoginResult.success(accessToken, refreshToken, res.id(), res.nickname(), res.role(), res.profileUrl());
+        return LoginResult.success(jwtTokenProvider.getJwtAccessExpirationMs(), accessToken, refreshToken, res.id(), res.nickname(), res.role(), res.profileUrl());
     }
 
     @Override
@@ -137,7 +137,7 @@ public class AuthService implements LoginUseCase, LogoutUseCase, RefreshTokenUse
             refreshTokenRepository.save(newToken);
 
             log.info("토큰 갱신 성공: userId={}", userId);
-            return RefreshResult.success(newAccessToken, newRefreshToken);
+            return RefreshResult.success(jwtTokenProvider.getJwtAccessExpirationMs(), newAccessToken, newRefreshToken);
 
         } catch (Exception e) {
             log.error("토큰 갱신 중 오류 발생: userId={}, error={}", userId, e.getMessage(), e);
