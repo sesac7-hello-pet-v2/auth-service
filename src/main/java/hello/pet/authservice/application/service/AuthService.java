@@ -32,9 +32,6 @@ public class AuthService implements LoginUseCase, LogoutUseCase, RefreshTokenUse
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    @Value("${jwt.token-prefix}")
-    private String tokenPrefix;
-
     @Override
     @Transactional
     public LoginResult login(LoginCommand cmd) {
@@ -53,7 +50,7 @@ public class AuthService implements LoginUseCase, LogoutUseCase, RefreshTokenUse
 
         log.info("로그인 성공: userId={}, accessToken");
 
-        return LoginResult.success(accessToken, refreshToken, tokenPrefix, res.id(), res.nickname(), res.role(), res.profileUrl());
+        return LoginResult.success(accessToken, refreshToken, res.id(), res.nickname(), res.role(), res.profileUrl());
     }
 
     @Override
