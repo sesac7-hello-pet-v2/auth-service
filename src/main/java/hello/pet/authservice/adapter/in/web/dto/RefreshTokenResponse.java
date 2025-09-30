@@ -9,4 +9,12 @@ public record RefreshTokenResponse(
     public static RefreshTokenResponse from(RefreshResult result) {
         return new RefreshTokenResponse(result.success(), result.message());
     }
+
+    public static RefreshTokenResponse invalidToken() {
+        return new RefreshTokenResponse(false, "리프레시 토큰이 없습니다.");
+    }
+
+    public static RefreshTokenResponse failed(RefreshResult result) {
+        return new RefreshTokenResponse(result.success(), result.message());
+    }
 }

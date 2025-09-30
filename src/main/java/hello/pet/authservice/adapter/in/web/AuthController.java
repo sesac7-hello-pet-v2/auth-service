@@ -1,5 +1,6 @@
 package hello.pet.authservice.adapter.in.web;
 
+import hello.pet.authservice.adapter.in.web.config.CookieFactory;
 import hello.pet.authservice.adapter.in.web.dto.LoginRequest;
 import hello.pet.authservice.adapter.in.web.dto.RefreshTokenResponse;
 import hello.pet.authservice.adapter.out.dto.LoginResponse;
@@ -16,17 +17,12 @@ import hello.pet.authservice.application.port.out.result.RefreshResult;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Duration;
-
-@Slf4j
 @RestController
 @RequestMapping("/v1/auth")
 @RequiredArgsConstructor
@@ -35,18 +31,7 @@ public class AuthController {
     private final LoginUseCase loginUseCase;
     private final LogoutUseCase logoutUseCase;
     private final RefreshTokenUseCase refreshTokenUseCase;
-
-    @Value("${jwt.cookie.secure:false}")
-    private boolean cookieSecure;
-
-    @Value("${jwt.cookie.same-site:Lax}")
-    private String cookieSameSite;
-
-    @Value("${jwt.access-expiration}")
-    private int jwtAccessExpirationMs;
-
-    @Value("${jwt.refresh-expiration}")
-    private int jwtRefreshTokenExpirationMs;
+    private final CookieFactory cookieFactory;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req,
@@ -55,21 +40,8 @@ public class AuthController {
         LoginResult res = loginUseCase.login(cmd);
         LoginResponse response = LoginResponse.from(res);
 
-        ResponseCookie access = ResponseCookie.from("ACCESS_TOKEN", res.accessToken())
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .path("/")
-                .maxAge(Duration.ofMillis(jwtAccessExpirationMs))
-                .sameSite(cookieSameSite)
-                .build();
-
-        ResponseCookie refresh = ResponseCookie.from("REFRESH_TOKEN", res.refreshToken())
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .path("/")
-                .maxAge(Duration.ofMillis(jwtRefreshTokenExpirationMs))
-                .sameSite(cookieSameSite)
-                .build();
+        ResponseCookie access = cookieFactory.createAccessTokenCookie(res.accessToken());
+        ResponseCookie refresh = cookieFactory.createRefreshTokenCookie(res.refreshToken());
 
         resp.addHeader(HttpHeaders.SET_COOKIE, access.toString());
         resp.addHeader(HttpHeaders.SET_COOKIE, refresh.toString());
@@ -86,25 +58,8 @@ public class AuthController {
         LogoutCommand cmd = new LogoutCommand(userId, TokenHash.sha256(refreshToken));
         LogoutResult res = logoutUseCase.logout(cmd);
 
-        if (!res.success()) {
-            log.warn("Logout failed for user: {}, reason: {}", userId, res.message());
-        }
-
-        ResponseCookie access = ResponseCookie.from("ACCESS_TOKEN", "")
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .path("/")
-                .maxAge(0)
-                .sameSite(cookieSameSite)
-                .build();
-
-        ResponseCookie refresh = ResponseCookie.from("REFRESH_TOKEN", "")
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .path("/")
-                .maxAge(0)
-                .sameSite(cookieSameSite)
-                .build();
+        ResponseCookie access = cookieFactory.clearAccessTokenCookie();
+        ResponseCookie refresh = cookieFactory.clearRefreshTokenCookie();
 
         resp.addHeader(HttpHeaders.SET_COOKIE, access.toString());
         resp.addHeader(HttpHeaders.SET_COOKIE, refresh.toString());
@@ -119,35 +74,18 @@ public class AuthController {
             HttpServletResponse resp) {
 
         if (refreshToken == null || refreshToken.isEmpty()) {
-            RefreshTokenResponse errorResponse = new RefreshTokenResponse(false, "리프레시 토큰이 없습니다.");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(RefreshTokenResponse.invalidToken());
         }
 
         RefreshCommand cmd = new RefreshCommand(refreshToken, userId);
         RefreshResult result = refreshTokenUseCase.refresh(cmd);
 
         if (!result.success()) {
-            log.warn("Token refresh failed for user: {}, reason: {}", userId, result.message());
-            RefreshTokenResponse errorResponse = RefreshTokenResponse.from(result);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(RefreshTokenResponse.failed(result));
         }
 
-        // 새로운 토큰들을 쿠키에 설정
-        ResponseCookie accessCookie = ResponseCookie.from("ACCESS_TOKEN", result.accessToken())
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .path("/")
-                .maxAge(Duration.ofMillis(jwtAccessExpirationMs))
-                .sameSite(cookieSameSite)
-                .build();
-
-        ResponseCookie refreshCookie = ResponseCookie.from("REFRESH_TOKEN", result.refreshToken())
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .path("/")
-                .maxAge(Duration.ofMillis(jwtRefreshTokenExpirationMs))
-                .sameSite(cookieSameSite)
-                .build();
+        ResponseCookie accessCookie = cookieFactory.createAccessTokenCookie(result.accessToken());
+        ResponseCookie refreshCookie = cookieFactory.createRefreshTokenCookie(result.refreshToken());
 
         resp.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         resp.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
