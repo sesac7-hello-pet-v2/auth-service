@@ -20,11 +20,11 @@ import hello.pet.authservice.domain.entity.RefreshToken;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class AuthService implements LoginUseCase, LogoutUseCase, RefreshTokenUseCase {
 
@@ -33,7 +33,6 @@ public class AuthService implements LoginUseCase, LogoutUseCase, RefreshTokenUse
     private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
-    @Transactional
     public LoginResult login(LoginCommand cmd) {
         LoginValidationResponse res = authPort.validationRequest(new LoginQuery(cmd.email(), cmd.password()));
 
