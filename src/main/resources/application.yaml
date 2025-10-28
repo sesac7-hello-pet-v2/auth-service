@@ -22,3 +22,15 @@ jwt:
     secret: "hellopethellopethellopethellopethellopethellopethellopethellopethellopethellopethellopet"
     access-expiration: 90000
     refresh-expiration: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
